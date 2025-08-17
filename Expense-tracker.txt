@@ -1,0 +1,81 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import datetime
+import os
+
+DATA_FILE = "data/expenses.csv"
+
+class ExpenseTracker:
+    def __init__(self):
+        os.makedirs("data", exist_ok=True)
+        if not os.path.exists(DATA_FILE):
+            df = pd.DataFrame(columns=["Date", "Category", "Amount"])
+            df.to_csv(DATA_FILE, index=False)
+
+    def add_expense(self, category, amount):
+        date = datetime.now().strftime("%Y-%m-%d")
+        new_entry = pd.DataFrame([[date, category, amount]],
+                                 columns=["Date", "Category", "Amount"])
+        df = pd.read_csv(DATA_FILE)
+        df = pd.concat([df, new_entry], ignore_index=True)
+        df.to_csv(DATA_FILE, index=False)
+        print(f"✅ Expense added: {category} - {amount}")
+
+    def view_expenses(self):
+        df = pd.read_csv(DATA_FILE)
+        if df.empty:
+            print("⚠️ No expenses found. Add some first!")
+            return
+        df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce")
+        print("\n📊 All Expenses:\n", df)
+
+    def monthly_summary(self):
+        df = pd.read_csv(DATA_FILE)
+        if df.empty:
+            print("⚠️ No data to summarize.")
+            return
+        df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce")
+        df["Date"] = pd.to_datetime(df["Date"])
+        df["Month"] = df["Date"].dt.to_period("M")
+        summary = df.groupby(["Month", "Category"])["Amount"].sum().unstack(fill_value=0)
+        print("\n📈 Monthly Summary:\n", summary)
+        summary.plot(kind="bar", stacked=True)
+        plt.title("Monthly Expenses by Category")
+        plt.ylabel("Amount")
+        plt.xlabel("Month")
+        plt.tight_layout()
+        plt.show()
+
+
+if __name__ == "__main__":
+    tracker = ExpenseTracker()
+
+    while True:
+        print("\n--- Expense Tracker ---")
+        print("1. Add Expense")
+        print("2. View Expenses")
+        print("3. Monthly Summary")
+        print("4. Exit")
+        choice = input("Enter choice: ")
+
+        if choice == "1":
+            category = input("Enter category (Food, Travel, Bills, Other): ")
+            try:
+                amount = float(input("Enter amount: "))
+            except ValueError:
+                print("❌ Invalid amount, please enter a number.")
+                continue
+            tracker.add_expense(category, amount)
+
+        elif choice == "2":
+            tracker.view_expenses()
+
+        elif choice == "3":
+            tracker.monthly_summary()
+
+        elif choice == "4":
+            print("👋 Goodbye!")
+            break
+        else:
+            print("❌ Invalid choice, try again!")
+
